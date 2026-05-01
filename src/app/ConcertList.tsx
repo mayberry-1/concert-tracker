@@ -106,10 +106,101 @@ function ArtistModal({
   );
 }
 
+function VenueModal({
+  venue,
+  shows,
+  onClose,
+}: {
+  venue: string;
+  shows: Show[];
+  onClose: () => void;
+}) {
+  const venueShows = useMemo(
+    () => shows.filter((s) => s.venue === venue),
+    [venue, shows]
+  );
+
+  const firstVisit = venueShows.at(-1);
+  const lastVisit = venueShows[0];
+  const allArtists = new Set(venueShows.flatMap((s) => s.artists));
+  const location = firstVisit
+    ? [firstVisit.city, firstVisit.state].filter(Boolean).join(", ")
+    : "";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-700 bg-gray-900 p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-white text-lg"
+        >
+          &times;
+        </button>
+
+        <h2 className="text-2xl font-bold text-white pr-8">{venue}</h2>
+        {location && (
+          <p className="mt-1 text-sm text-gray-400">{location}</p>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-6 text-sm">
+          <div>
+            <p className="text-xl font-bold text-emerald-400">{venueShows.length}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wider">
+              {venueShows.length === 1 ? "Show" : "Shows"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xl font-bold text-emerald-400">{allArtists.size}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wider">
+              {allArtists.size === 1 ? "Artist" : "Artists"}
+            </p>
+          </div>
+        </div>
+
+        {firstVisit && lastVisit && (
+          <p className="mt-3 text-xs text-gray-400">
+            {firstVisit === lastVisit
+              ? `Visited on ${firstVisit.date}`
+              : `First visit ${firstVisit.date} \u2022 Last visit ${lastVisit.date}`}
+          </p>
+        )}
+
+        <div className="mt-6 space-y-2">
+          {venueShows.map((show, i) => (
+            <div
+              key={i}
+              className="rounded border border-gray-800 bg-gray-800/50 px-3 py-2"
+            >
+              <span className="text-xs text-gray-500">{show.date}</span>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {show.artists.map((a, j) => (
+                  <span
+                    key={j}
+                    className="rounded bg-gray-700 px-1.5 py-0.5 text-xs text-gray-300"
+                  >
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ConcertList({ shows }: { shows: Show[] }) {
   const [query, setQuery] = useState("");
   const [newestFirst, setNewestFirst] = useState(true);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
+  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
 
   const filtered = query.trim()
     ? shows.filter((show) => {
@@ -131,6 +222,13 @@ export default function ConcertList({ shows }: { shows: Show[] }) {
           artist={selectedArtist}
           shows={shows}
           onClose={() => setSelectedArtist(null)}
+        />
+      )}
+      {selectedVenue && (
+        <VenueModal
+          venue={selectedVenue}
+          shows={shows}
+          onClose={() => setSelectedVenue(null)}
         />
       )}
 
@@ -171,7 +269,12 @@ export default function ConcertList({ shows }: { shows: Show[] }) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-500 w-28 shrink-0">{show.date}</span>
-                  <span className="text-sm font-semibold text-white">{show.venue}</span>
+                  <button
+                    onClick={() => setSelectedVenue(show.venue)}
+                    className="text-sm font-semibold text-white hover:text-emerald-400 cursor-pointer transition-colors"
+                  >
+                    {show.venue}
+                  </button>
                   {show.city && (
                     <span className="text-xs text-gray-400">
                       {show.city}, {show.state}
