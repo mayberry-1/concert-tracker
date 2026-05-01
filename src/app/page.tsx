@@ -1,6 +1,7 @@
 import { getConcerts } from "@/lib/concerts";
 import ConcertList from "./ConcertList";
 import USMap from "./USMap";
+import UploadCSV from "./UploadCSV";
 
 export default function Home() {
   const shows = getConcerts();
@@ -58,8 +59,13 @@ export default function Home() {
     <main className="min-h-screen bg-gray-950 text-gray-100">
       {/* Header */}
       <div className="border-b border-gray-800 bg-gray-900 px-6 py-10">
-        <h1 className="text-4xl font-bold tracking-tight">Concert Tracker</h1>
-        <p className="mt-1.5 text-gray-400">Every show, every artist</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">Concert Tracker</h1>
+            <p className="mt-1.5 text-gray-400">Every show, every artist</p>
+          </div>
+          <UploadCSV />
+        </div>
 
         <div className="mt-8 flex flex-wrap gap-10">
           <Stat label="Shows" value={shows.length} />
