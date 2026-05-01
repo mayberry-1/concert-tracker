@@ -201,19 +201,60 @@ export default function ConcertList({ shows }: { shows: Show[] }) {
   const [newestFirst, setNewestFirst] = useState(true);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
+  const [selectedDecade, setSelectedDecade] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
 
-  const filtered = query.trim()
-    ? shows.filter((show) => {
-        const q = query.toLowerCase();
-        return (
+  const decades = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of shows) {
+      const year = s.date.match(/\d{4}/)?.[0];
+      if (year) set.add(year.slice(0, 3) + "0s");
+    }
+    return Array.from(set).sort();
+  }, [shows]);
+
+  const yearsInDecade = useMemo(() => {
+    if (!selectedDecade) return [];
+    const prefix = selectedDecade.slice(0, 3);
+    const set = new Set<string>();
+    for (const s of shows) {
+      const year = s.date.match(/\d{4}/)?.[0];
+      if (year && year.startsWith(prefix)) set.add(year);
+    }
+    return Array.from(set).sort();
+  }, [shows, selectedDecade]);
+
+  const filtered = useMemo(() => {
+    let result = [...shows];
+
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      result = result.filter(
+        (show) =>
           show.artists.some((a) => a.toLowerCase().includes(q)) ||
           show.venue.toLowerCase().includes(q) ||
           show.city.toLowerCase().includes(q)
-        );
-      })
-    : [...shows];
+      );
+    }
 
-  if (!newestFirst) filtered.reverse();
+    if (selectedYear) {
+      result = result.filter((s) => s.date.includes(selectedYear));
+    } else if (selectedDecade) {
+      const prefix = selectedDecade.slice(0, 3);
+      result = result.filter((s) => {
+        const year = s.date.match(/\d{4}/)?.[0];
+        return year && year.startsWith(prefix);
+      });
+    }
+
+    return result;
+  }, [shows, query, selectedDecade, selectedYear]);
+
+  const sorted = useMemo(() => {
+    const copy = [...filtered];
+    if (!newestFirst) copy.reverse();
+    return copy;
+  }, [filtered, newestFirst]);
 
   return (
     <div>
@@ -232,7 +273,7 @@ export default function ConcertList({ shows }: { shows: Show[] }) {
         />
       )}
 
-      {/* Search bar */}
+      {/* Search bar & filters */}
       <div className="sticky top-0 z-10 border-b border-gray-800 bg-gray-950 px-4 py-3">
         <div className="mx-auto max-w-4xl flex gap-2">
           <input
@@ -249,19 +290,64 @@ export default function ConcertList({ shows }: { shows: Show[] }) {
             {newestFirst ? "Newest first \u2193" : "Oldest first \u2191"}
           </button>
         </div>
-        {query && (
+
+        {/* Decade pills */}
+        <div className="mx-auto max-w-4xl mt-3 flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => { setSelectedDecade(null); setSelectedYear(null); }}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              !selectedDecade
+                ? "bg-violet-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+            }`}
+          >
+            All
+          </button>
+          {decades.map((decade) => (
+            <button
+              key={decade}
+              onClick={() => {
+                setSelectedDecade(selectedDecade === decade ? null : decade);
+                setSelectedYear(null);
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                selectedDecade === decade
+                  ? "bg-violet-600 text-white"
+                  : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+              }`}
+            >
+              {decade}
+            </button>
+          ))}
+
+          {/* Year dropdown */}
+          {selectedDecade && yearsInDecade.length > 0 && (
+            <select
+              value={selectedYear ?? ""}
+              onChange={(e) => setSelectedYear(e.target.value || null)}
+              className="ml-2 rounded-lg border border-gray-700 bg-gray-900 px-2 py-1 text-xs text-gray-300 focus:border-indigo-500 focus:outline-none"
+            >
+              <option value="">All years</option>
+              {yearsInDecade.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {(query || selectedDecade) && (
           <p className="mt-2 text-center text-xs text-gray-500">
-            {filtered.length} {filtered.length === 1 ? "show" : "shows"} found
+            {filtered.length} {filtered.length === 1 ? "show" : "shows"}{selectedYear ? ` in ${selectedYear}` : selectedDecade ? ` in the ${selectedDecade}` : " found"}
           </p>
         )}
       </div>
 
       {/* Show list */}
       <div className="px-4 py-4 space-y-2">
-        {filtered.length === 0 ? (
-          <p className="text-center text-gray-500 py-16">No shows match &ldquo;{query}&rdquo;</p>
+        {sorted.length === 0 ? (
+          <p className="text-center text-gray-500 py-16">No shows match your filters</p>
         ) : (
-          filtered.map((show, i) => (
+          sorted.map((show, i) => (
             <div
               key={i}
               className="rounded border border-gray-800 bg-gray-900 px-4 py-3"
