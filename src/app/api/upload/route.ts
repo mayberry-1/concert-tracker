@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const CSV_PATH = path.join(process.cwd(), "src/data/Concerts.csv");
+const CSV_PATH = path.join(process.cwd(), "src/data/concerts.csv");
 
 export async function POST(req: Request) {
   const formData = await req.formData();
